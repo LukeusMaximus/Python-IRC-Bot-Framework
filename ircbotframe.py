@@ -69,15 +69,17 @@ class ircBot:
         self.binds = []
     #functions you are not supposed to use (which have been privatised)
     def __identAccept(self, nick):
-        for (nickName, accept, reject, args) in self.identifyNickCommands:
+        for (nickName, accept, acceptParams, reject, rejectParams) in self.identifyNickCommands:
             if nickName == nick:
-                accept(*args) #calls the approved callback
-                self.identifyNickCommands.remove((nickName, accept, reject, args))
+                print "accept"
+                accept(*acceptParams) #calls the approved callback
+                self.identifyNickCommands.remove((nickName, accept, acceptParams, reject, rejectParams))
     def __identReject(self, nick):
-        for (nickName, accept, reject, args) in self.identifyNickCommands:
+        for (nickName, accept, acceptParams, reject, rejectParams) in self.identifyNickCommands:
             if nickName == nick:
-                reject(*args) #calls the denied callback
-                self.identifyNickCommands.remove((nickName, accept, reject, args))
+                print "reject"
+                reject(*rejectParams) #calls the denied callback
+                self.identifyNickCommands.remove((nickName, accept, acceptParams, reject, rejectParams))
     def __callBind(self, msgtype, sender, headers, message):
         for (messageType, callback) in self.binds:
             if (messageType == msgtype):
@@ -112,8 +114,8 @@ class ircBot:
             else:
                 self.__callBind(headers[1], sender, headers[2:], message)
     #functions you are supposed to use
-    def identify(self, nick, callbackApproved, callbackDenied, *parameters):
-        self.identifyNickCommands += [(nick, callbackApproved, callbackDenied, parameters)]
+    def identify(self, nick, callbackApproved, approvedParameters, callbackDenied, deniedParameters):
+        self.identifyNickCommands += [(nick, callbackApproved, approvedParameters, callbackDenied, deniedParameters)]
         self.outBuf.push("WHOIS " + nick)
     def connect(self):
         self.irc.connect((self.network, self.port))
@@ -173,14 +175,17 @@ def privmsg(bot, sender, headers, message):
     elif message.startswith("!say "):
         firstSpace = message[5:].find(" ")
         bot.say(message[5:firstSpace], message[firstSpace+1:])
-    elif message.startswith("!quit "):
+    elif message.startswith("!quit"):
         if sender == "Lukeus_Maximus":
-            bot.identify(sender, quitSuccess, authFailure, message[6:])
+            if len(message) > 6:
+                bot.identify(sender, quitSuccess, (message[6:],), authFailure, (headers[0], sender))
+            else:
+                bot.identify(sender, quitSuccess, ("",), authFailure, (headers[0], sender))
     elif message.startswith("!auth "):
         if len(headers) > 0:
-            bot.identify(message[6:], authSuccess, authFailure, headers[0], message[6:])
+            bot.identify(message[6:], authSuccess, (headers[0], message[6:]), authFailure, (headers[0], message[6:]))
         else:
-            bot.identify(message[6:], authSuccess, authFailure, sender, message[6:])
+            bot.identify(message[6:], authSuccess, (sender, message[6:]), authFailure, (sender, message[6:]))
     else:
         print "PRIVMSG", sender, headers, message
 
