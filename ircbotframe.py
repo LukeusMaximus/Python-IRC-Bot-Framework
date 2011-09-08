@@ -57,9 +57,6 @@ class ircInputBuffer:
 class ircBot:
     def __init__(self, network, port, name, description):
         self.keepGoing = True
-        self.irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.inBuf = ircInputBuffer(self.irc)
-        self.outBuf = ircOutputBuffer(self.irc)
         self.name = name
         self.desc = description
         self.network = network
@@ -71,14 +68,14 @@ class ircBot:
     def __identAccept(self, nick):
         for (nickName, accept, acceptParams, reject, rejectParams) in self.identifyNickCommands:
             if nickName == nick:
-                print "accept"
-                accept(*acceptParams) #calls the approved callback
+                print nickName + " has been verified."
+                accept(self, *acceptParams) #calls the approved callback
                 self.identifyNickCommands.remove((nickName, accept, acceptParams, reject, rejectParams))
     def __identReject(self, nick):
         for (nickName, accept, acceptParams, reject, rejectParams) in self.identifyNickCommands:
             if nickName == nick:
-                print "reject"
-                reject(*rejectParams) #calls the denied callback
+                print nickName + " could not be verified."
+                reject(self, *rejectParams) #calls the denied callback
                 self.identifyNickCommands.remove((nickName, accept, acceptParams, reject, rejectParams))
     def __callBind(self, msgtype, sender, headers, message):
         for (messageType, callback) in self.binds:
@@ -95,6 +92,7 @@ class ircBot:
             self.serverName = headers[0]
         sender = headers[0]
         if sender == self.serverName:
+            print "Received " + headers[1] + " from server."
             if headers[1] == "307" and len(headers) >= 4:
                 #is a registered nick
                 self.__identAccept(headers[3])
@@ -108,28 +106,36 @@ class ircBot:
             cut = headers[0].find('!')
             if cut != -1:
                 sender = sender[:cut]
+            msgtype = headers[1]
             #split ACTION msgtype from PRIVMSG msgtype and treat as seperate msgtype
-            if headers[1] == "PRIVMSG" and message.startswith("ACTION ") and message.endswith(""):
-                self.__callBind("ACTION", sender, headers[2:], message[8:-1])
-            else:
-                self.__callBind(headers[1], sender, headers[2:], message)
+            if msgtype == "PRIVMSG" and message.startswith("ACTION ") and message.endswith(""):
+                msgtpye = "ACTION"
+            print "Received " + msgtype + " from " + sender + "."
+            self.__callBind(msgtype, sender, headers[2:], message)
     #functions you are supposed to use
     def identify(self, nick, callbackApproved, approvedParameters, callbackDenied, deniedParameters):
+        print "Verifying " + nick + "..."
         self.identifyNickCommands += [(nick, callbackApproved, approvedParameters, callbackDenied, deniedParameters)]
         self.outBuf.push("WHOIS " + nick)
     def connect(self):
+        print "Connecting..."
+        self.irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.irc.connect((self.network, self.port))
+        self.inBuf = ircInputBuffer(self.irc)
+        self.outBuf = ircOutputBuffer(self.irc)
         self.outBuf.push("NICK " + self.name)
         self.outBuf.push("USER " + self.name + " " + self.name + " " + self.name + " :" + self.desc)
     def disconnect(self, qMessage):
-        #performs the quit as well
+        print "Disconnecting..."
         self.outBuf.push("QUIT :" + qMessage) 
         self.irc.close()
-    def reconnect():
-        self.disconnect()
+    def reconnect(self):
+        self.disconnect("Reconnecting")
+        print "Pausing before reconnecting..."
+        time.sleep(5)
         self.connect()
     def join(self, channel):
-        #channel should start with a '#'
+        print "Joining " + channel + "..."
         self.outBuf.push("JOIN " + channel)
     def say(self, recipient, message):
         self.outBuf.push("PRIVMSG " + recipient + " :" + message)
@@ -159,15 +165,19 @@ class ircBot:
 
 # Bot specific function definitions
 
-def authSuccess(recipient, name):
+def authSuccess(bot, recipient, name):
     bot.say(recipient, name + " has been identifed successfully")
     
-def authFailure(recipient, name):
+def authFailure(bot, recipient, name):
     bot.say(recipient, name + " has not been identified")
 
-def quitSuccess(quitMessage):
+def quitSuccess(bot, quitMessage):
     bot.disconnect(quitMessage)
     bot.stop()
+
+def reconnectSuccess(bot, channel):
+    bot.reconnect()
+    bot.join(channel)
 
 def privmsg(bot, sender, headers, message):
     if message.startswith("!send "):
@@ -181,6 +191,9 @@ def privmsg(bot, sender, headers, message):
                 bot.identify(sender, quitSuccess, (message[6:],), authFailure, (headers[0], sender))
             else:
                 bot.identify(sender, quitSuccess, ("",), authFailure, (headers[0], sender))
+    elif message == "!reconnect":
+        if sender == "Lukeus_Maximus":
+            bot.identify(sender, reconnectSuccess, (chanName,), authFailure, (headers[0], sender))
     elif message.startswith("!auth "):
         if len(headers) > 0:
             bot.identify(message[6:], authSuccess, (headers[0], message[6:]), authFailure, (headers[0], message[6:]))
