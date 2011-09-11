@@ -34,13 +34,19 @@ where <channel name> begins with the '#' character. Finally, make the bot listen
 2. Bot methods:
 ---------------
 
+Ban (nick, channel, reason)
+
+    Bans and kicks a user with <nick> from <channel> with a given <reason> (optional). Only works if the bot has operator privileges in <channel>.
+    
+    NOT IMPLEMENTED YET
+
 Bind (msgtype, callback)
 
     This command binds a particular message type <msgtype> (passed as a string) to a given <callback> function. If the bot  hears a message with this message type, the corresponding function will be called. The <callback> function MUST be of the form:
     
         funcname(bot, sender, headers, message)
         
-    where <bot> is a reference to the IRC bot, <sender> is the nick of the entity that sent the message, <headers> is a list of any additional message headers before the message content and <message> is the actual message content. Bind can be used to listen for both server and user message types (bear in mind that server messages are usually numeric strings). Bind only allows a single function to be bound to each message type.
+    where <bot> is a reference to the IRC bot, <sender> is the nick of the entity that sent the message, <headers> is a list of any additional message headers before the message content and <message> is the actual message content. Bind can be used to listen for both server and user message types (bear in mind that server message types are usually numeric strings). Bind only allows a single function to be bound to each message type.
 
 Connect ()
 
@@ -52,11 +58,29 @@ Disconnect (qMessage)
     
 Identify (nick, callbackApproved, approvedParameters, callbackDenied, deniedParameters)
     
-    Used for checking whether or not a user with the nickname <nick> is who they say they are by checking their WHOIS info from the server. If they are verified, the function <callbackApproved> will be called with the parameters <approvedParameters>. If they cannot be verified or are not registered, then <callbackDenied> is called with <deniedParameters>. Parameter lists <approvedParameters> and <deniedParameters> are tuples with the tuple items matching the <callbackApproved> and <callbackDenied> function parameters in order.
+    where <callbackApproved> and <callbackDenied> are of the form:
+    
+        funcname(bot, parameter 1, parameter 2, ...)
+    
+    Used for checking whether or not a user with the nickname <nick> is who they say they are by checking their WHOIS info from the server. If they are verified, the function <callbackApproved> will be called with the parameters <bot> followed by <approvedParameters> (which will fill <parameter 1>, <parameter 2>, etc. in order). If they cannot be verified or are not registered, then <callbackDenied> is called with <bot> followed by <deniedParameters>. Parameter lists <approvedParameters> and <deniedParameters> are tuples with the tuple items matching the <callbackApproved> and <callbackDenied> function parameters in order from the second parameter. For example:
+    
+        identify(nick, approved, (string, integer1), denied, (integer2))
+        
+    If the nick is verified the following function will be called:
+    
+        approved(bot, string, integer1)
+    
+    Otherwise the other function will be called:
+    
+        denied(bot, integer2)
 
 Join (channel)
 
     Makes the bot join a given channel. <channel> MUST start with a '#' character.
+    
+Kick (nick, channel, reason)
+
+    If the bot has operator privileges in the channel <channel>, the user with <nick> will be kicked from it with the given reason <reason>.
 
 Reconnect ()
 
