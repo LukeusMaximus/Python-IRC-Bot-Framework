@@ -122,8 +122,10 @@ class ircBot:
             print "Received " + msgtype + " from " + sender + "."
             self.__callBind(msgtype, sender, headers[2:], message)
     # PUBLIC FUNCTIONS
-    def ban(self, nick):
+    def ban(self, nick, channel, reason):
         print "Banning " + nick + "..."
+        #self.outBuf.sendBuffered("")
+        self.kick(nick, channel, reason)
     def bind(self, msgtype, callback):
         for i in xrange(0, len(self.binds)):
             if self.binds[i][0] == msgtype:
@@ -148,8 +150,9 @@ class ircBot:
     def join(self, channel):
         print "Joining " + channel + "..."
         self.outBuf.sendBuffered("JOIN " + channel)
-    def kick(self, nick):
+    def kick(self, nick, channel, reason):
         print "Kicking " + nick + "..."
+        self.outBuf.sendBuffered("KICK " + channel + " " + nick + " :" + reason)
     def reconnect(self):
         self.disconnect("Reconnecting")
         print "Pausing before reconnecting..."

@@ -16,12 +16,13 @@ def joinSuccess(bot, channel):
 def saySuccess(bot, channel, message):
     bot.say(channel, message)
 
+def kickSuccess(bot, nick, channel, reason):
+    bot.kick(nick, channel, reason)
+
 def privmsg(bot, sender, headers, message):
     if message.startswith("!say "):
         firstSpace = message[5:].find(" ") + 5
-        print message[5:], firstSpace
         if sender == owner:
-            print (message[:firstSpace], message[firstSpace+1:])
             bot.identify(sender, saySuccess, (message[5:firstSpace], message[firstSpace+1:]), authFailure, (sender,))
     elif message.startswith("!quit"):
         if sender == owner:
@@ -32,6 +33,11 @@ def privmsg(bot, sender, headers, message):
     elif message.startswith("!join "):
         if sender == owner:
             bot.identify(sender, joinSuccess, (message[6:],), authFailure, (headers[0], sender))
+    elif message.startswith("!kick "):
+        firstSpace = message[6:].find(" ") + 6
+        secondSpace = message[firstSpace+1:].find(" ") + (firstSpace + 1)
+        if sender == owner:
+            bot.identify(sender, kickSuccess, (message[6:firstSpace], message[firstSpace+1:secondSpace], message[secondSpace+1:]), authFailure, (headers[0], sender))
 
 def actionmsg(bot, sender, headers, message):
     print "An ACTION message was sent by " + sender + " with the headers " + headers + ". It says: \"" + sender + " " + message
@@ -47,10 +53,11 @@ if __name__ == "__main__":
         bot.connect()
         bot.join(chanName)
         bot.say(chanName, "I am an example bot.")
-        bot.say(chanName, "I have 3 functions, they are Join, Quit and Say.")
+        bot.say(chanName, "I have 4 functions, they are Join, Kick, Quit and Say.")
         bot.say(chanName, "Join (joins a channel); Usage: \"!join #<channel>\"")
+        bot.say(chanName, "Kick (kicks a user); Usage: \"!kick <nick> #<channel> <reason>\"")
         bot.say(chanName, "Quit (disconnects from the IRC server); Usage: \"!quit [<quit message>]\"")
-        bot.say(chanName, "Say (makes the bot say something); Usage: \"!say <channel> <message>\"")
+        bot.say(chanName, "Say (makes the bot say something); Usage: \"!say <channel/user> <message>\"")
         bot.say(chanName, "The underlying framework is in no way limited to the above functions.")
         bot.say(chanName, "This is merely an example of the framework's usage")
         bot.run()
