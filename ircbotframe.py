@@ -72,23 +72,32 @@ class ircBot:
         self.network = network
         self.port = port
         self.identifyNickCommands = []
+        self.identifyLock = False
         self.serverName = ""
         self.binds = []
     # PRIVATE FUNCTIONS
     def __identAccept(self, nick):
-        # Calls the given "approved" callback.
-        for (nickName, accept, acceptParams, reject, rejectParams) in self.identifyNickCommands:
-            if nickName == nick:
+        # Calls the given "approved" callbacks for all functions called by that nick.      
+        i = 0  
+        while i < len(self.identifyNickCommands):
+            (nickName, accept, acceptParams, reject, rejectParams) = self.identifyNickCommands[i]
+            if nick == nickName:
                 print nickName + " has been verified."
                 accept(self, *acceptParams)
-                self.identifyNickCommands.remove((nickName, accept, acceptParams, reject, rejectParams))
+                self.identifyNickCommands.pop(i)
+            else:
+                i += 1
     def __identReject(self, nick):
-        # Calls the given "denied" callback.
-        for (nickName, accept, acceptParams, reject, rejectParams) in self.identifyNickCommands:
-            if nickName == nick:
-                print nickName + " could not be verified."
+        # Calls the given "denied" callback for all functions called by that nick.
+        i = 0
+        while i < len(self.identifyNickCommands):
+            (nickName, accept, acceptParams, reject, rejectParams) = self.identifyNickCommands[i]
+            if nick == nickName:
+                print nickName + " has been verified."
                 reject(self, *rejectParams)
-                self.identifyNickCommands.remove((nickName, accept, acceptParams, reject, rejectParams))
+                self.identifyNickCommands.pop(i)
+            else:
+                i += 1
     def __callBind(self, msgtype, sender, headers, message):
         # Calls the function associated with the given msgtype.
         for (messageType, callback) in self.binds:
@@ -111,6 +120,11 @@ class ircBot:
                 self.__identAccept(headers[3])
             if headers[1] == "318" and len(headers) >= 4:
                 self.__identReject(headers[3])
+                #identifys the next user in the nick commands list
+                if len(self.identifyNickCommands) == 0:
+                    self.identifyLock = False
+                else:
+                    self.outBuf.sendBuffered("WHOIS " + self.identifyNickCommands[0][0])
             self.__callBind(headers[1], sender, headers[2:], message)
         else:
             cut = headers[0].find('!')
@@ -146,7 +160,9 @@ class ircBot:
     def identify(self, nick, approvedFunc, approvedParams, deniedFunc, deniedParams):
         print "Verifying " + nick + "..."
         self.identifyNickCommands += [(nick, approvedFunc, approvedParams, deniedFunc, deniedParams)]
-        self.outBuf.sendBuffered("WHOIS " + nick)
+        if not self.identifyLock:
+            self.outBuf.sendBuffered("WHOIS " + nick)
+            self.identifyLock = True
     def join(self, channel):
         print "Joining " + channel + "..."
         self.outBuf.sendBuffered("JOIN " + channel)
@@ -159,6 +175,7 @@ class ircBot:
         time.sleep(5)
         self.connect()
     def run(self):
+        print "Bot is now running."
         while self.keepGoing:
             line = ""
             while len(line) == 0:
