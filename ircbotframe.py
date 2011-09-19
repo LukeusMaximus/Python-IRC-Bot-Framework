@@ -105,7 +105,6 @@ class ircBot:
                 callback(self, sender, headers, message)
     def __processLine(self, line):
         # Does most of the parsing of the line received from the IRC network.
-        #print line
         lineParts = line[1:].split(":")
         headers = lineParts[0].split()
         message = ""
@@ -114,27 +113,30 @@ class ircBot:
         if self.serverName == "":
             self.serverName = headers[0]
         sender = headers[0]
-        if sender == self.serverName:
-            #print "Received " + headers[1] + " from the server."
-            if headers[1] == "307" and len(headers) >= 4:
-                self.__identAccept(headers[3])
-            if headers[1] == "318" and len(headers) >= 4:
-                self.__identReject(headers[3])
-                #identifys the next user in the nick commands list
-                if len(self.identifyNickCommands) == 0:
-                    self.identifyLock = False
-                else:
-                    self.outBuf.sendBuffered("WHOIS " + self.identifyNickCommands[0][0])
-            self.__callBind(headers[1], sender, headers[2:], message)
+        if len(headers) < 2:
+            print "Unhelpful number of messages in message: \"" + line + "\""
         else:
-            cut = headers[0].find('!')
-            if cut != -1:
-                sender = sender[:cut]
-            msgtype = headers[1]
-            if msgtype == "PRIVMSG" and message.startswith("ACTION ") and message.endswith(""):
-                msgtpye = "ACTION"
-            print "Received " + msgtype + " from " + sender + "."
-            self.__callBind(msgtype, sender, headers[2:], message)
+            if sender == self.serverName:
+                #print "Received " + headers[1] + " from the server."
+                if headers[1] == "307" and len(headers) >= 4:
+                    self.__identAccept(headers[3])
+                if headers[1] == "318" and len(headers) >= 4:
+                    self.__identReject(headers[3])
+                    #identifys the next user in the nick commands list
+                    if len(self.identifyNickCommands) == 0:
+                        self.identifyLock = False
+                    else:
+                        self.outBuf.sendBuffered("WHOIS " + self.identifyNickCommands[0][0])
+                self.__callBind(headers[1], sender, headers[2:], message)
+            else:
+                cut = headers[0].find('!')
+                if cut != -1:
+                    sender = sender[:cut]
+                msgtype = headers[1]
+                if msgtype == "PRIVMSG" and message.startswith("ACTION ") and message.endswith(""):
+                    msgtpye = "ACTION"
+                print "Received " + msgtype + " from " + sender + "."
+                self.__callBind(msgtype, sender, headers[2:], message)
     # PUBLIC FUNCTIONS
     def ban(self, nick, channel, reason):
         print "Banning " + nick + "..."
