@@ -105,11 +105,9 @@ class ircBot:
                 callback(self, sender, headers, message)
     def __processLine(self, line):
         # Does most of the parsing of the line received from the IRC network.
-        lineParts = line[1:].split(":")
-        headers = lineParts[0].split()
-        message = ""
-        if len(lineParts) > 1:
-            message = line[1:].split(":")[1]
+        secondColon = line[1:].find(":") + 1
+        headers = line[1:secondColon].split(" ")
+        message = line[secondColon+1:]
         if self.serverName == "":
             self.serverName = headers[0]
         sender = headers[0]
@@ -140,7 +138,7 @@ class ircBot:
     # PUBLIC FUNCTIONS
     def ban(self, nick, channel, reason):
         print "Banning " + nick + "..."
-        #self.outBuf.sendBuffered("")
+        self.outBuf.sendBuffered("MODE +b " + channel + " " + nick)
         self.kick(nick, channel, reason)
     def bind(self, msgtype, callback):
         for i in xrange(0, len(self.binds)):
