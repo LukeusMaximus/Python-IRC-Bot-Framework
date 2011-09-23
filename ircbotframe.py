@@ -133,7 +133,6 @@ class ircBot:
                 msgtype = headers[1]
                 if msgtype == "PRIVMSG" and message.startswith("ACTION ") and message.endswith(""):
                     msgtpye = "ACTION"
-                print "Received " + msgtype + " from " + sender + "."
                 self.__callBind(msgtype, sender, headers[2:], message)
     # PUBLIC FUNCTIONS
     def ban(self, nick, channel, reason):
