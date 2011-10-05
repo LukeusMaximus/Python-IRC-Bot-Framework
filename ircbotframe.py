@@ -31,7 +31,6 @@ class ircOutputBuffer:
             self.__startPopTimer()
     def sendImmediately(self, string):
         # Sends the given string without buffering.
-        print("Sending \"" + string + "\"")
         self.irc.send(bytes(string) + b"\r\n")
 
 class ircInputBuffer:
@@ -75,6 +74,7 @@ class ircBot:
         self.identifyLock = False
         self.serverName = ""
         self.binds = []
+        self.debug = False
     # PRIVATE FUNCTIONS
     def __identAccept(self, nick):
         # Calls the given "approved" callbacks for all functions called by that nick.      
@@ -82,8 +82,7 @@ class ircBot:
         while i < len(self.identifyNickCommands):
             (nickName, accept, acceptParams, reject, rejectParams) = self.identifyNickCommands[i]
             if nick == nickName:
-                print nickName + " has been verified."
-                accept(self, *acceptParams)
+                accept(*acceptParams)
                 self.identifyNickCommands.pop(i)
             else:
                 i += 1
@@ -93,8 +92,7 @@ class ircBot:
         while i < len(self.identifyNickCommands):
             (nickName, accept, acceptParams, reject, rejectParams) = self.identifyNickCommands[i]
             if nick == nickName:
-                print nickName + " has been verified."
-                reject(self, *rejectParams)
+                reject(*rejectParams)
                 self.identifyNickCommands.pop(i)
             else:
                 i += 1
@@ -102,7 +100,7 @@ class ircBot:
         # Calls the function associated with the given msgtype.
         for (messageType, callback) in self.binds:
             if (messageType == msgtype):
-                callback(self, sender, headers, message)
+                callback(sender, headers, message)
     def __processLine(self, line):
         # Does most of the parsing of the line received from the IRC network.
         secondColon = line[1:].find(":") + 1
@@ -112,7 +110,7 @@ class ircBot:
             self.serverName = headers[0]
         sender = headers[0]
         if len(headers) < 2:
-            print "Unhelpful number of messages in message: \"" + line + "\""
+            self.__debugPrint("Unhelpful number of messages in message: \"" + line + "\"")
         else:
             if sender == self.serverName:
                 #print "Received " + headers[1] + " from the server."
@@ -134,10 +132,13 @@ class ircBot:
                 if msgtype == "PRIVMSG" and message.startswith("ACTION ") and message.endswith(""):
                     msgtpye = "ACTION"
                 self.__callBind(msgtype, sender, headers[2:], message)
+    def __debugPrint(self, s):
+        if self.debug:
+            print s
     # PUBLIC FUNCTIONS
-    def ban(self, nick, channel, reason):
-        print "Banning " + nick + "..."
-        self.outBuf.sendBuffered("MODE +b " + channel + " " + nick)
+    def ban(self, banMask, channel, reason):
+        self.__debugPrint("Banning " + banMask + "...")
+        self.outBuf.sendBuffered("MODE +b " + channel + " " + banMask)
         self.kick(nick, channel, reason)
     def bind(self, msgtype, callback):
         for i in xrange(0, len(self.binds)):
@@ -145,43 +146,45 @@ class ircBot:
                 self.binds.remove(i)
         self.binds.append((msgtype, callback))
     def connect(self):
-        print "Connecting..."
+        self.__debugPrint("Connecting...")
         self.irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.irc.connect((self.network, self.port))
         self.inBuf = ircInputBuffer(self.irc)
         self.outBuf = ircOutputBuffer(self.irc)
         self.outBuf.sendBuffered("NICK " + self.name)
         self.outBuf.sendBuffered("USER " + self.name + " " + self.name + " " + self.name + " :" + self.desc)
+    def debug(self, state):
+        self.debug = state
     def disconnect(self, qMessage):
-        print "Disconnecting..."
+        self.__debugPrint("Disconnecting...")
         self.outBuf.sendBuffered("QUIT :" + qMessage)
         self.irc.close()
     def identify(self, nick, approvedFunc, approvedParams, deniedFunc, deniedParams):
-        print "Verifying " + nick + "..."
+        self.__debugPrint("Verifying " + nick + "...")
         self.identifyNickCommands += [(nick, approvedFunc, approvedParams, deniedFunc, deniedParams)]
         if not self.identifyLock:
             self.outBuf.sendBuffered("WHOIS " + nick)
             self.identifyLock = True
     def join(self, channel):
-        print "Joining " + channel + "..."
+        self.__debugPrint("Joining " + channel + "...")
         self.outBuf.sendBuffered("JOIN " + channel)
     def kick(self, nick, channel, reason):
-        print "Kicking " + nick + "..."
+        self.__debugPrint("Kicking " + nick + "...")
         self.outBuf.sendBuffered("KICK " + channel + " " + nick + " :" + reason)
     def reconnect(self):
         self.disconnect("Reconnecting")
-        print "Pausing before reconnecting..."
+        self.__debugPrint("Pausing before reconnecting...")
         time.sleep(5)
         self.connect()
     def run(self):
-        print "Bot is now running."
+        self.__debugPrint("Bot is now running.")
         while self.keepGoing:
             line = ""
             while len(line) == 0:
                 try:
                     line = self.inBuf.getLine()
                 except socket.error, msg:
-                    print msg
+                    self.debugPrint(msg)
                     self.reconnect()
             if line.startswith("PING"):
                 self.outBuf.sendImmediately("PONG " + line.split()[1])
@@ -193,4 +196,7 @@ class ircBot:
         self.outBuf.sendBuffered(string)
     def stop(self):
         self.keepGoing = False
+    def unban(self, banMask, channel):
+        self.__debugPrint("Unbanning " + banMask + "...")
+        self.outBuf.sendBuffered("MODE -b " + channel + " " + banMask)
 

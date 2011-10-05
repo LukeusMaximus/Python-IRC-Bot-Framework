@@ -3,29 +3,29 @@ import sys
 
 # Bot specific function definitions
     
-def authFailure(bot, recipient, name):
+def authFailure(recipient, name):
     bot.say(recipient, "You could not be identified")
 
-def quitSuccess(bot, quitMessage):
+def quitSuccess(quitMessage):
     bot.disconnect(quitMessage)
     bot.stop()
     
-def joinSuccess(bot, channel):
+def joinSuccess(channel):
     bot.join(channel)
 
-def saySuccess(bot, channel, message):
+def saySuccess(channel, message):
     bot.say(channel, message)
 
-def kickSuccess(bot, nick, channel, reason):
+def kickSuccess(nick, channel, reason):
     bot.kick(nick, channel, reason)
 
-def identPass(bot):
+def identPass():
     pass
     
-def identFail(bot):
+def identFail():
     pass
 
-def privmsg(bot, sender, headers, message):
+def privmsg(sender, headers, message):
     if message.startswith("!say "):
         firstSpace = message[5:].find(" ") + 5
         if sender == owner:
@@ -44,11 +44,13 @@ def privmsg(bot, sender, headers, message):
         secondSpace = message[firstSpace+1:].find(" ") + (firstSpace + 1)
         if sender == owner:
             bot.identify(sender, kickSuccess, (message[6:firstSpace], message[firstSpace+1:secondSpace], message[secondSpace+1:]), authFailure, (headers[0], sender))
+    else:
+        print "PRIVMSG: \"" + message + "\""
             
-def actionmsg(bot, sender, headers, message):
+def actionmsg(sender, headers, message):
     print "An ACTION message was sent by " + sender + " with the headers " + headers + ". It says: \"" + sender + " " + message
 
-def endMOTD(bot, sender, headers, message):
+def endMOTD(sender, headers, message):
     bot.join(chanName)
     bot.say(chanName, "I am an example bot.")
     bot.say(chanName, "I have 4 functions, they are Join, Kick, Quit and Say.")
