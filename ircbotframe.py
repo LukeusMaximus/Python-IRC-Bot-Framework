@@ -10,6 +10,7 @@ class ircOutputBuffer:
         self.waiting = False
         self.irc = irc
         self.queue = []
+        self.error = False
     def __pop(self):
         if len(self.queue) == 0:
             self.waiting = False
@@ -31,7 +32,15 @@ class ircOutputBuffer:
             self.__startPopTimer()
     def sendImmediately(self, string):
         # Sends the given string without buffering.
-        self.irc.send(bytes(string) + b"\r\n")
+        if not self.error:
+            try:
+                self.irc.send(bytes(string) + b"\r\n")
+            except socket.error, msg:
+                self.error = True
+                print "Output error", msg
+                print "Was sending \"" + string + "\""
+    def isInError(self):
+        return self.error
 
 class ircInputBuffer:
     # Keeps a record of the last line fragment received by the socket which is usually not a complete line.
@@ -74,7 +83,7 @@ class ircBot:
         self.identifyLock = False
         self.serverName = ""
         self.binds = []
-        self.debug = False
+        self.debug = True
     # PRIVATE FUNCTIONS
     def __identAccept(self, nick):
         # Calls the given "approved" callbacks for all functions called by that nick.      
@@ -113,7 +122,8 @@ class ircBot:
             self.__debugPrint("Unhelpful number of messages in message: \"" + line + "\"")
         else:
             if sender == self.serverName:
-                #print "Received " + headers[1] + " from the server."
+                if(self.debug):
+                    print "[" + headers[1] + "] " + message
                 if headers[1] == "307" and len(headers) >= 4:
                     self.__identAccept(headers[3])
                 if headers[1] == "318" and len(headers) >= 4:
@@ -184,12 +194,14 @@ class ircBot:
                 try:
                     line = self.inBuf.getLine()
                 except socket.error, msg:
-                    self.debugPrint(msg)
+                    print "Input error", msg
                     self.reconnect()
             if line.startswith("PING"):
                 self.outBuf.sendImmediately("PONG " + line.split()[1])
             else:
                 self.__processLine(line)
+            if self.outBuf.isInError():
+                self.reconnect()
     def say(self, recipient, message):
         self.outBuf.sendBuffered("PRIVMSG " + recipient + " :" + message)  
     def send(self, string):
