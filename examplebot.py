@@ -11,7 +11,7 @@ def quitSuccess(quitMessage):
     bot.stop()
     
 def joinSuccess(channel):
-    bot.join(channel)
+    bot.joinchan(channel)
 
 def saySuccess(channel, message):
     bot.say(channel, message)
@@ -51,7 +51,7 @@ def actionmsg(sender, headers, message):
     print "An ACTION message was sent by " + sender + " with the headers " + headers + ". It says: \"" + sender + " " + message
 
 def endMOTD(sender, headers, message):
-    bot.join(chanName)
+    bot.joinchan(chanName)
     bot.say(chanName, "I am an example bot.")
     bot.say(chanName, "I have 4 functions, they are Join, Kick, Quit and Say.")
     bot.say(chanName, "Join (joins a channel); Usage: \"!join #<channel>\"")
@@ -70,8 +70,12 @@ if __name__ == "__main__":
         bot.bind("PRIVMSG", privmsg)
         bot.bind("ACTION", actionmsg)
         bot.bind("376", endMOTD)
-        bot.connect()
-        bot.run()
+        bot.start()
+        inputStr = "" 
+        while inputStr != "stop":
+            inputStr = raw_input()
+        bot.stop()
+        bot.join()
     else:
         print "Usage: python examplebot.py <your IRC nick> <irc channel (no '#' character please)>"
 

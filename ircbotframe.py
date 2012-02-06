@@ -72,8 +72,9 @@ class ircInputBuffer:
         self.lines = self.lines[1:]
         return str(line)
 
-class ircBot:
+class ircBot(threading.Thread):
     def __init__(self, network, port, name, description):
+        threading.Thread.__init__(self)
         self.keepGoing = True
         self.name = name
         self.desc = description
@@ -175,7 +176,7 @@ class ircBot:
         if not self.identifyLock:
             self.outBuf.sendBuffered("WHOIS " + nick)
             self.identifyLock = True
-    def join(self, channel):
+    def joinchan(self, channel):
         self.__debugPrint("Joining " + channel + "...")
         self.outBuf.sendBuffered("JOIN " + channel)
     def kick(self, nick, channel, reason):
@@ -188,6 +189,7 @@ class ircBot:
         self.connect()
     def run(self):
         self.__debugPrint("Bot is now running.")
+        self.connect()
         while self.keepGoing:
             line = ""
             while len(line) == 0:
