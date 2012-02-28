@@ -12,7 +12,7 @@ First, create the bot object with the constructor:
 
 Next, bind functions to the various IRC message types. These functions will be called when the IRC bot receives messages with those message types. The function to be called should be of the form:
 
-    funcname(bot, sender, header, message)
+    funcname(sender, header, message)
     
 These can then be bound using:
 
@@ -26,7 +26,7 @@ Then join a / some channel(s) using:
 
     bot.joinchan(<channel name>)
     
-where <channel name> begins with the '#' character. Finally, make the bot listening to messages with:
+where <channel name> begins with the '#' character. Finally, make the bot start listening to messages with:
 
     bot.run()
     
