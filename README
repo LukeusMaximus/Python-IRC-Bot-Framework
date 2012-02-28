@@ -24,7 +24,7 @@ Once functions have been bound, connect the irc bot to the server using:
     
 Then join a / some channel(s) using:
 
-    bot.join(<channel name>)
+    bot.joinchan(<channel name>)
     
 where <channel name> begins with the '#' character. Finally, make the bot listening to messages with:
 
@@ -34,11 +34,11 @@ where <channel name> begins with the '#' character. Finally, make the bot listen
 2. Bot methods:
 ---------------
 
-Ban (banMask, channel, reason):
+ban (banMask, channel, reason):
 
     Bans and kicks users satistfying the ban mask <banMask> from <channel> with a given <reason> (optional). Only works if the bot has operator privileges in <channel>.
 
-Bind (msgtype, callback)
+bind (msgtype, callback)
 
     This command binds a particular message type <msgtype> (passed as a string) to a given <callback> function. If the bot  hears a message with this message type, the corresponding function will be called. The <callback> function MUST be of the form:
     
@@ -46,19 +46,19 @@ Bind (msgtype, callback)
         
     where <sender> is the nick of the entity that sent the message, <headers> is a list of any additional message headers before the message content and <message> is the actual message content. Bind can be used to listen for both server and user message types (bear in mind that server message types are usually numeric strings). Bind only allows a single function to be bound to each message type.
 
-Connect ()
+connect ()
 
     Makes the bot connect to the specified irc server.
     
-Debug (state)
+debug (state)
 
     Sets the bot's debug state to <state> which is a boolean value.
 
-Disconnect (qMessage)
+disconnect (qMessage)
 
     Makes the bot disconnect from the irc server with the quit message <qMessage> (for no quit message, put an empty string)
     
-Identify (nick, callbackApproved, approvedParameters, callbackDenied, deniedParameters)
+identify (nick, callbackApproved, approvedParameters, callbackDenied, deniedParameters)
     
     where <callbackApproved> and <callbackDenied> are of the form:
     
@@ -76,32 +76,32 @@ Identify (nick, callbackApproved, approvedParameters, callbackDenied, deniedPara
     
         denied(integer2)
 
-Join (channel)
+joinchan (channel)
 
     Makes the bot join a given channel. <channel> MUST start with a '#' character.
     
-Kick (nick, channel, reason)
+kick (nick, channel, reason)
 
     If the bot has operator privileges in the channel <channel>, the user with <nick> will be kicked from it with the given reason <reason>.
 
-Reconnect ()
+reconnect ()
 
     Disconnects from the server then reconnects. It disconnects with the quit message "Reconnecting".
 
-Run ()
+run ()
 
-    Tells the bot to start listening to the messages it receives and to act upon the input. This is a blocking call, any bot functions you wish to call must be called by functions connected to bindings (using the command Bind).
+    Tells the bot to start listening to the messages it receives and to act upon the input using functions connected to the bindings using the command bind(). The bot starts listening on a new thread and so is not a blocking call. Any bot functions you wish to call must be called by functions connected to bindings (using the command bind()).
     
-Say (recipient, message)
+say (recipient, message)
 
     The bot says the given message <message> to the recipient <recipient>. The recipient can be a channel (and should start with a '#' character if this is the case).
 
-Send (string)
+send (string)
 
-    Sends a raw IRC message given by <string> to the server. Can have dire consequences if your message is not formatted correctly.    
+    Sends a raw IRC message given by <string> to the server. Can have dire consequences if your message is not formatted correctly. It is advised that you consult the IRC specification in RFC 1459.
     
-Stop ()
+stop ()
 
-    Stops the IRC bot from running. You should disconnect from the server first.
+    Stops the IRC bot from running. You should disconnect from the server first. The bot's thread will terminate naturally. Should you wish to use the bot's thread join() function, stop() should be called first.
 
 

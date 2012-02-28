@@ -29,7 +29,7 @@ def privmsg(sender, headers, message):
     if message.startswith("!say "):
         firstSpace = message[5:].find(" ") + 5
         if sender == owner:
-            bot.identify(sender, saySuccess, (message[5:firstSpace], message[firstSpace+1:]), authFailure, (sender,))
+            bot.identify(sender, saySuccess, (message[5:firstSpace], message[firstSpace+1:]), authFailure, (headers[0], sender))
     elif message.startswith("!quit"):
         if sender == owner:
             if len(message) > 6:
@@ -48,7 +48,7 @@ def privmsg(sender, headers, message):
         print "PRIVMSG: \"" + message + "\""
             
 def actionmsg(sender, headers, message):
-    print "An ACTION message was sent by " + sender + " with the headers " + headers + ". It says: \"" + sender + " " + message
+    print "An ACTION message was sent by " + sender + " with the headers " + str(headers) + ". It says: \"" + sender + " " + message + "\""
 
 def endMOTD(sender, headers, message):
     bot.joinchan(chanName)
@@ -63,13 +63,16 @@ def endMOTD(sender, headers, message):
 
 # Main program begins here
 if __name__ == "__main__":
-    if len(sys.argv) == 3:
-        owner = sys.argv[1]
-        chanName = "#" + sys.argv[2]
-        bot = ircBot("irc.synirc.net", 6667, "ExampleBot", "An example bot written with the new IRC bot framework")
+    if len(sys.argv) == 5:
+        server = sys.argv[1]
+        port = int(sys.argv[2])
+        owner = sys.argv[3]
+        chanName = "#" + sys.argv[4]
+        bot = ircBot(server, port, "ExampleBot", "An example bot written with the new IRC bot framework")
         bot.bind("PRIVMSG", privmsg)
         bot.bind("ACTION", actionmsg)
         bot.bind("376", endMOTD)
+        bot.debugging(True)
         bot.start()
         inputStr = "" 
         while inputStr != "stop":
@@ -77,6 +80,6 @@ if __name__ == "__main__":
         bot.stop()
         bot.join()
     else:
-        print "Usage: python examplebot.py <your IRC nick> <irc channel (no '#' character please)>"
+        print "Usage: python examplebot.py <server> <port> <your IRC nick> <irc channel (no '#' character please)>"
 
 

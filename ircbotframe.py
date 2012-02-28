@@ -82,9 +82,8 @@ class ircBot(threading.Thread):
         self.port = port
         self.identifyNickCommands = []
         self.identifyLock = False
-        self.serverName = ""
         self.binds = []
-        self.debug = True
+        self.debug = False
     # PRIVATE FUNCTIONS
     def __identAccept(self, nick):
         # Calls the given "approved" callbacks for all functions called by that nick.      
@@ -114,18 +113,28 @@ class ircBot(threading.Thread):
     def __processLine(self, line):
         # Does most of the parsing of the line received from the IRC network.
         secondColon = line[1:].find(":") + 1
-        headers = line[1:secondColon].split(" ")
-        message = line[secondColon+1:]
-        if self.serverName == "":
-            self.serverName = headers[0]
+        if secondColon == 0:
+            headers = line[1:].strip().split(" ")
+            message = ""
+        else:
+            headers = line[1:secondColon].strip().split(" ")
+            message = line[secondColon+1:]
         sender = headers[0]
         if len(headers) < 2:
             self.__debugPrint("Unhelpful number of messages in message: \"" + line + "\"")
         else:
-            if sender == self.serverName:
-                if(self.debug):
-                    print "[" + headers[1] + "] " + message
-                if headers[1] == "307" and len(headers) >= 4:
+            if "!" in sender:
+                cut = headers[0].find('!')
+                if cut != -1:
+                    sender = sender[:cut]
+                msgtype = headers[1]
+                if msgtype == "PRIVMSG" and message.startswith("ACTION ") and message.endswith(""):
+                    msgtype = "ACTION"
+                    message = message[8:-1]
+                self.__callBind(msgtype, sender, headers[2:], message)
+            else:
+                self.__debugPrint("[" + headers[1] + "] " + message)
+                if (headers[1] == "307" or headers[1] == "330") and len(headers) >= 4:
                     self.__identAccept(headers[3])
                 if headers[1] == "318" and len(headers) >= 4:
                     self.__identReject(headers[3])
@@ -135,14 +144,7 @@ class ircBot(threading.Thread):
                     else:
                         self.outBuf.sendBuffered("WHOIS " + self.identifyNickCommands[0][0])
                 self.__callBind(headers[1], sender, headers[2:], message)
-            else:
-                cut = headers[0].find('!')
-                if cut != -1:
-                    sender = sender[:cut]
-                msgtype = headers[1]
-                if msgtype == "PRIVMSG" and message.startswith("ACTION ") and message.endswith(""):
-                    msgtpye = "ACTION"
-                self.__callBind(msgtype, sender, headers[2:], message)
+                
     def __debugPrint(self, s):
         if self.debug:
             print s
@@ -164,7 +166,7 @@ class ircBot(threading.Thread):
         self.outBuf = ircOutputBuffer(self.irc)
         self.outBuf.sendBuffered("NICK " + self.name)
         self.outBuf.sendBuffered("USER " + self.name + " " + self.name + " " + self.name + " :" + self.desc)
-    def debug(self, state):
+    def debugging(self, state):
         self.debug = state
     def disconnect(self, qMessage):
         self.__debugPrint("Disconnecting...")
