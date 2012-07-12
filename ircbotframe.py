@@ -86,7 +86,8 @@ class ircBot(threading.Thread):
         self.debug = False
     # PRIVATE FUNCTIONS
     def __identAccept(self, nick):
-        # Calls the given "approved" callbacks for all functions called by that nick.      
+        """ Executes all the callbacks that have been approved for this nick
+    	"""
         i = 0  
         while i < len(self.identifyNickCommands):
             (nickName, accept, acceptParams, reject, rejectParams) = self.identifyNickCommands[i]
@@ -111,14 +112,26 @@ class ircBot(threading.Thread):
             if (messageType == msgtype):
                 callback(sender, headers, message)
     def __processLine(self, line):
+        # If a message comes from another user, it will have an @ symbol
+        if "@" in line:
+            # Location of the @ symbol in the line (proceeds sender's domain)
+            at = line.find("@")
+            # Location of the first gap, this immediately follows the sender's domain
+            gap = line[at:].find(" ") + at + 1
+            lastColon = line[gap+1:].find(":") + 2 + gap
+        else:
+            lastColon = line[1:].find(":") + 1
+
         # Does most of the parsing of the line received from the IRC network.
-        secondColon = line[1:].find(":") + 1
-        if secondColon == 0:
+        # if there is no message to the line. ie. only one colon at the start of line
+        if ":" not in line[1:]:
             headers = line[1:].strip().split(" ")
             message = ""
         else:
-            headers = line[1:secondColon].strip().split(" ")
-            message = line[secondColon+1:]
+            # Split everything up to the lastColon (ie. the headers)
+            headers = line[1:lastColon-1].strip().split(" ")
+            message = line[lastColon:]
+            
         sender = headers[0]
         if len(headers) < 2:
             self.__debugPrint("Unhelpful number of messages in message: \"" + line + "\"")
@@ -138,7 +151,7 @@ class ircBot(threading.Thread):
                     self.__identAccept(headers[3])
                 if headers[1] == "318" and len(headers) >= 4:
                     self.__identReject(headers[3])
-                    #identifys the next user in the nick commands list
+                    #identifies the next user in the nick commands list
                     if len(self.identifyNickCommands) == 0:
                         self.identifyLock = False
                     else:
@@ -153,11 +166,15 @@ class ircBot(threading.Thread):
         self.__debugPrint("Banning " + banMask + "...")
         self.outBuf.sendBuffered("MODE +b " + channel + " " + banMask)
         self.kick(nick, channel, reason)
+        
     def bind(self, msgtype, callback):
+        # Check if the msgtype already exists
         for i in xrange(0, len(self.binds)):
+            # Remove msgtype if it has already been "binded" to 
             if self.binds[i][0] == msgtype:
                 self.binds.remove(i)
         self.binds.append((msgtype, callback))
+        
     def connect(self):
         self.__debugPrint("Connecting...")
         self.irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
